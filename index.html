@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Market Moves</title>
+<style>
+  :root { --bg:#f5f7fb; --card:#fff; --text:#1b2238; --muted:#6b748c; --line:#e6e9f2; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#10131c; --card:#181c28; --text:#e8ecf6; --muted:#8e97b0; --line:#262b3b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--text);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .card { max-width:900px; margin:0 auto; background:var(--card); border:1px solid var(--line);
+          border-radius:14px; padding:16px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:14px; }
+  .wrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+  th, td { padding:10px 12px; text-align:right; white-space:nowrap; font-size:15px; }
+  th { position:sticky; top:0; background:var(--card); font-size:13px; color:var(--muted);
+       border-bottom:1px solid var(--line); }
+  th:first-child, td:first-child { text-align:left; position:sticky; left:0; background:var(--card); font-weight:600; }
+  td.num { font-weight:600; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Daily Market Moves</h1>
+  <div class="sub" id="sub">Loading…</div>
+  <div class="wrap"><table id="t"></table></div>
+</div>
+<script>
+function ord(n){ const s=["th","st","nd","rd"], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+function fmtDate(iso){
+  const d = new Date(iso+"T00:00:00");
+  const m = d.toLocaleString("en-US",{month:"short"});
+  return ord(d.getDate())+" "+m+"'"+String(d.getFullYear()).slice(2);
+}
+fetch("history.csv?"+Date.now()).then(r=>r.text()).then(txt=>{
+  const rows = txt.trim().split("\n").map(l=>l.split(","));
+  const head = rows[0], data = rows.slice(1);
+  const si = head.indexOf("Stocks");
+  const cols = head.map((h,i)=>({h,i})).filter(c=>c.h!=="Stocks");
+  const max = {};
+  cols.forEach(c=>{ if(c.i>0) max[c.i] = Math.max(...data.map(r=>+r[c.i]||0), 1); });
+
+  let html = "<tr>"+cols.map(c=>"<th>"+c.h+"</th>").join("")+"</tr>";
+  data.forEach(r=>{
+    html += "<tr>";
+    cols.forEach(c=>{
+      if(c.i===0){ html += "<td>"+fmtDate(r[0])+"</td>"; return; }
+      const a = (0.08 + 0.45*(+r[c.i]/max[c.i])).toFixed(2);
+      const col = c.h.startsWith("Abv") ? "34,160,90" : "220,70,70";
+      html += `<td class="num" style="background:rgba(${col},${a})">${r[c.i]}</td>`;
+    });
+    html += "</tr>";
+  });
+  document.getElementById("t").innerHTML = html;
+  document.getElementById("sub").textContent =
+    "Latest: "+fmtDate(data[0][0])+" · "+data[0][si]+" stocks (Nifty 500)";
+}).catch(()=>{ document.getElementById("sub").textContent = "Could not load history.csv"; });
+</script>
+</body>
+</html>
