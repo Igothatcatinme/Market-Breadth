@@ -1,0 +1,26 @@
+name: Daily tracker
+on:
+  schedule:
+    - cron: "15 4 * * 1-5"    # ~9:45 AM IST snapshot
+    - cron: "30 10 * * 1-5"   # ~4:00 PM IST final
+  workflow_dispatch:           # lets you run it manually with a button
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yfinance pandas
+      - run: python tracker.py
+      - run: |
+          git config user.name "bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add history.csv
+          git commit -m "update" || echo "no changes"
+          git push
